@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "fhs-trade-sim",
+    "fhs-trade-sim": "fhs-trade-sim"
+  },
+  "targets": {},
+  "etags": {}
+}

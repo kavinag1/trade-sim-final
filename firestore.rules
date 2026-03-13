@@ -1,0 +1,62 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if requester is admin
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email in
+             ['kavinagrawal20@gmail.com', 's.manit.bhasin@fountainheadschools.org', 's.vardhan.bhotra@fountainheadschools.org'];
+    }
+
+    // Helper: requester is authenticated
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    // ── Users ──────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for leaderboard)
+      allow read: if isAuthed();
+
+      // Users can only write their own document, but CANNOT change sensitive fields
+      allow create: if isAuthed() && request.auth.uid == userId
+        && request.resource.data.cashBalance == 100000
+        && request.resource.data.netWorth == 100000
+        && request.resource.data.portfolio == [];
+
+      // Only allow updating non-financial fields from client (teamName, watchlist)
+      // Financial fields (cashBalance, netWorth, portfolio) are ONLY writable by Cloud Functions
+      allow update: if isAuthed() && request.auth.uid == userId
+        && !('cashBalance' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('netWorth' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('portfolio' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('portfolioValue' in request.resource.data.diff(resource.data).affectedKeys())
+        && !('totalTrades' in request.resource.data.diff(resource.data).affectedKeys());
+
+      // Admins can do anything
+      allow write: if isAdmin();
+    }
+
+    // ── Trades ─────────────────────────────────────────────────────────────
+    match /trades/{tradeId} {
+      // Users can read their own trades; admins can read all
+      allow read: if isAuthed() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+
+      // Trades are ONLY created by Cloud Functions (no client writes)
+      allow write: if false;
+    }
+
+    // ── Portfolio Snapshots ─────────────────────────────────────────────────
+    match /portfolioSnapshots/{snapshotId} {
+      allow read: if isAuthed() && (
+        resource.data.userId == request.auth.uid || isAdmin()
+      );
+      allow write: if false; // Only Cloud Functions
+    }
+  }
+}
