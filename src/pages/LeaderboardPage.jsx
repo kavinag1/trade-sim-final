@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { db } from '../firebase/config';
+import { functions } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../utils/market';
 
@@ -19,6 +21,16 @@ export default function LeaderboardPage() {
   async function loadLeaderboard() {
     setLoading(true);
     try {
+      // Best-effort sync so this user's leaderboard entry is current.
+      if (user?.uid) {
+        try {
+          const syncMyNetWorth = httpsCallable(functions, 'syncMyNetWorth');
+          await syncMyNetWorth();
+        } catch (syncErr) {
+          console.error('Net worth sync failed:', syncErr);
+        }
+      }
+
       const usersRef = collection(db, 'users');
       const q = query(usersRef, orderBy('netWorth', 'desc'));
       const snap = await getDocs(q);

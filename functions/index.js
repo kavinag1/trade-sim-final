@@ -15,7 +15,7 @@ const db = admin.firestore();
 setGlobalOptions({ region: 'us-central1' });
 
 // Admin emails - must match frontend config
-const ADMIN_EMAILS = ['kavinagrawal20@gmail.com', 's.manit.bhasin@fountainheadschools.org', 's.vardhan.bhotra@fountainheadschools.org'];
+const ADMIN_EMAILS = ['kavinagrawal20@gmail.com', 's.manit.bhasin@fountainheadschools.org', 's.vardhan.bothra@fountainheadschools.org'];
 const STARTING_BALANCE = 100000;
 const FINNHUB_API_KEY = 'd6omf4pr01qi5kh3go90d6omf4pr01qi5kh3go9g';
 
@@ -265,6 +265,61 @@ exports.executeTrade = onCall({ secrets: [secretSheetId, secretSAEmail, secretSA
   }
 
   return result;
+});
+
+// ─── syncMyNetWorth ─────────────────────────────────────────────────────────
+// Recomputes current user's net worth from live prices so leaderboard reflects
+// mark-to-market value even without placing a new trade.
+exports.syncMyNetWorth = onCall(async (request) => {
+  const { auth, data } = request;
+  if (!auth) throw new HttpsError('unauthenticated', 'Must be signed in');
+
+  const userRef = db.collection('users').doc(auth.uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) throw new HttpsError('not-found', 'User not found');
+
+  const userDoc = userSnap.data();
+  const portfolio = Array.isArray(userDoc.portfolio) ? userDoc.portfolio : [];
+  const cashBalance = Number(userDoc.cashBalance || 0);
+
+  const clientPortfolioValue = Number(data?.portfolioValue);
+  const hasClientPortfolioValue = Number.isFinite(clientPortfolioValue) && clientPortfolioValue >= 0;
+
+  let portfolioValue = 0;
+  if (hasClientPortfolioValue) {
+    // Prefer dashboard-computed mark-to-market value so leaderboard matches UI.
+    portfolioValue = clientPortfolioValue;
+  } else if (portfolio.length > 0) {
+    const symbols = [...new Set(portfolio.map((p) => String(p.symbol || '').toUpperCase()).filter(Boolean))];
+    const prices = {};
+
+    // Fetch each ticker once; if quote fetch fails, fall back to avgPrice.
+    await Promise.all(symbols.map(async (symbol) => {
+      try {
+        prices[symbol] = await fetchStockPrice(symbol);
+      } catch (err) {
+        prices[symbol] = null;
+      }
+    }));
+
+    portfolioValue = portfolio.reduce((sum, pos) => {
+      const symbol = String(pos.symbol || '').toUpperCase();
+      const shares = Number(pos.shares || 0);
+      const fallback = Number(pos.avgPrice || 0);
+      const livePrice = prices[symbol];
+      const priceToUse = typeof livePrice === 'number' && livePrice > 0 ? livePrice : fallback;
+      return sum + shares * priceToUse;
+    }, 0);
+  }
+
+  const netWorth = cashBalance + portfolioValue;
+  await userRef.update({
+    portfolioValue,
+    netWorth,
+    netWorthLastSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, portfolioValue, netWorth };
 });
 
 // ─── adminResetCompetition ───────────────────────────────────────────────────

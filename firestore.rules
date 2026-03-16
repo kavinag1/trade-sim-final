@@ -8,7 +8,7 @@ service cloud.firestore {
       return request.auth != null &&
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.email in
-             ['kavinagrawal20@gmail.com', 's.manit.bhasin@fountainheadschools.org', 's.vardhan.bhotra@fountainheadschools.org'];
+              ['kavinagrawal20@gmail.com', 's.manit.bhasin@fountainheadschools.org', 's.vardhan.bothra@fountainheadschools.org'];
     }
 
     // Helper: requester is authenticated

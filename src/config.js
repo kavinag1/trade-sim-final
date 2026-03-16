@@ -6,7 +6,12 @@ export const FINNHUB_BASE_URL = 'https://finnhub.io/api/v1';
 export const ADMIN_EMAILS = [
   'kavinagrawal20@gmail.com',
   's.manit.bhasin@fountainheadschools.org',
-  's.vardhan.bhotra@fountainheadschools.org',
+  's.vardhan.bothra@fountainheadschools.org',
+];
+
+// Only these users can access unreleased UI/UX experiments.
+export const EXPERIMENT_OWNER_EMAILS = [
+  'kavinagrawal20@gmail.com',
 ];
 
 // Competition settings

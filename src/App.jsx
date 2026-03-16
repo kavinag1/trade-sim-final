@@ -12,6 +12,7 @@ import WatchlistPage from './pages/WatchlistPage';
 import LeaderboardPage from './pages/LeaderboardPage';
 import AdminPage from './pages/AdminPage';
 import SetupPage from './pages/SetupPage';
+import PreviewLabPage from './pages/PreviewLabPage';
 import SchoolBrand from './components/common/SchoolBrand';
 
 function ProtectedRoute({ children }) {
@@ -26,6 +27,14 @@ function AdminRoute({ children }) {
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+}
+
+function OwnerOnlyRoute({ children }) {
+  const { user, loading, canSeeExperiments } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!canSeeExperiments) return <Navigate to="/" replace />;
   return children;
 }
 
@@ -55,6 +64,7 @@ function AppRoutes() {
         <Route path="watchlist" element={<WatchlistPage />} />
         <Route path="leaderboard" element={<LeaderboardPage />} />
         <Route path="admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
+        <Route path="preview" element={<OwnerOnlyRoute><PreviewLabPage /></OwnerOnlyRoute>} />
       </Route>
     </Routes>
   );

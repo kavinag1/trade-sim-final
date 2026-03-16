@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase/config';
-import { STARTING_BALANCE, ADMIN_EMAILS } from '../config';
+import { STARTING_BALANCE, ADMIN_EMAILS, EXPERIMENT_OWNER_EMAILS } from '../config';
 
 const AuthContext = createContext(null);
 
@@ -11,6 +11,7 @@ export function AuthProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [canSeeExperiments, setCanSeeExperiments] = useState(false);
 
   async function clearStaleAuthCache() {
     if (typeof window === 'undefined') return;
@@ -44,6 +45,8 @@ export function AuthProvider({ children }) {
           setUser(firebaseUser);
           const adminStatus = ADMIN_EMAILS.includes(firebaseUser.email);
           setIsAdmin(adminStatus);
+          const experimentAccess = EXPERIMENT_OWNER_EMAILS.includes(firebaseUser.email);
+          setCanSeeExperiments(experimentAccess);
           await loadOrCreateUserProfile(firebaseUser);
         } catch (err) {
           console.error('Invalid auth session detected. Re-authentication required.', err);
@@ -52,11 +55,13 @@ export function AuthProvider({ children }) {
           setUser(null);
           setUserProfile(null);
           setIsAdmin(false);
+          setCanSeeExperiments(false);
         }
       } else {
         setUser(null);
         setUserProfile(null);
         setIsAdmin(false);
+        setCanSeeExperiments(false);
       }
       setLoading(false);
     });
@@ -108,7 +113,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, isAdmin, signInWithGoogle, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, isAdmin, canSeeExperiments, signInWithGoogle, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

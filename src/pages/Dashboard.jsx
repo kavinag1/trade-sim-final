@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { db } from '../firebase/config';
+import { functions } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { getMultipleQuotes } from '../services/finnhub';
 import { formatCurrency, formatPercent } from '../utils/market';
@@ -13,16 +15,20 @@ export default function Dashboard() {
   const [portfolioData, setPortfolioData] = useState([]);
   const [recentTrades, setRecentTrades] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncedNetWorth, setSyncedNetWorth] = useState(null);
 
   useEffect(() => {
     if (!user || !userProfile) return;
     loadData();
+    const interval = setInterval(loadData, 60000);
+    return () => clearInterval(interval);
   }, [user, userProfile]);
 
   async function loadData() {
     setLoading(true);
     try {
       const portfolio = userProfile?.portfolio || [];
+      let livePortfolioValue = 0;
       if (portfolio.length > 0) {
         const symbols = portfolio.map(p => p.symbol);
         const quotes = await getMultipleQuotes(symbols);
@@ -35,7 +41,18 @@ export default function Dashboard() {
           const pnlPct = cost > 0 ? (pnl / cost) * 100 : 0;
           return { ...p, currentPrice: q.price || 0, currentValue, pnl, pnlPct, quote: q };
         });
+        livePortfolioValue = enriched.reduce((sum, pos) => sum + pos.currentValue, 0);
         setPortfolioData(enriched);
+      } else {
+        setPortfolioData([]);
+      }
+
+      // Keep persisted financial fields aligned with current market prices.
+      const syncMyNetWorth = httpsCallable(functions, 'syncMyNetWorth');
+      const syncResult = await syncMyNetWorth({ portfolioValue: livePortfolioValue });
+      const synced = syncResult?.data?.netWorth;
+      if (typeof synced === 'number') {
+        setSyncedNetWorth(synced);
       }
 
       const tradesRef = collection(db, 'trades');
@@ -53,7 +70,7 @@ export default function Dashboard() {
   const netWorth = (userProfile?.cashBalance || 0) + portfolioValue;
   // Compare current computed net worth vs last persisted account net worth.
   // This avoids misleading "daily" loss when user just opened a new position today.
-  const baselineNetWorth = userProfile?.netWorth ?? 100000;
+  const baselineNetWorth = syncedNetWorth ?? userProfile?.netWorth ?? 100000;
   const dailyPnL = netWorth - baselineNetWorth;
   const totalPnL = netWorth - 100000;
 

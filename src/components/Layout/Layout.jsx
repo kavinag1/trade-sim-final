@@ -13,7 +13,7 @@ const NAV_ITEMS = [
 ];
 
 export default function Layout() {
-  const { userProfile, logout, isAdmin } = useAuth();
+  const { userProfile, logout, isAdmin, canSeeExperiments } = useAuth();
 
   return (
     <div className="flex h-screen bg-dark-900 overflow-hidden">
@@ -57,6 +57,22 @@ export default function Layout() {
             >
               <ShieldIcon className="w-4 h-4 flex-shrink-0" />
               Admin Panel
+            </NavLink>
+          )}
+
+          {canSeeExperiments && (
+            <NavLink
+              to="/preview"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mt-2 ${
+                  isActive
+                    ? 'bg-accent-blue/10 text-accent-blue'
+                    : 'text-blue-400 hover:text-blue-300 hover:bg-dark-600'
+                }`
+              }
+            >
+              <FlaskIcon className="w-4 h-4 flex-shrink-0" />
+              Preview Lab
             </NavLink>
           )}
         </nav>
@@ -153,6 +169,14 @@ function LogoutIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+function FlaskIcon({ className }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3h6m-3 0v5l5.447 8.17A2 2 0 0118.784 19H5.216a2 2 0 01-1.663-2.83L9 8V3zm0 9h6" />
     </svg>
   );
 }
