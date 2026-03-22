@@ -5,7 +5,6 @@ import { db } from '../firebase/config';
 import { useAuth } from '../contexts/AuthContext';
 import { getQuote, getCompanyProfile } from '../services/finnhub';
 import { formatCurrency, formatPercent } from '../utils/market';
-import StockChart from '../components/charts/StockChart';
 import TradePanel from '../components/trading/TradePanel';
 
 export default function StockPage() {
@@ -127,10 +126,8 @@ export default function StockPage() {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* Chart */}
+        {/* Stats + Company info */}
         <div className="xl:col-span-2 space-y-4">
-          <StockChart symbol={sym} />
-
           {/* Stats */}
           {quote && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -176,7 +173,20 @@ export default function StockPage() {
         </div>
 
         {/* Trade panel */}
-        <div>
+        <div className="space-y-4">
+          <div className="card border border-accent-blue/30 bg-accent-blue/10">
+            <h3 className="text-sm font-semibold text-white mb-2">How to buy 1 share</h3>
+            <ol className="list-decimal list-inside text-sm text-gray-200 space-y-1">
+              <li>Confirm the stock symbol and current price on this page.</li>
+              <li>In the trade panel, keep action as BUY.</li>
+              <li>Enter quantity as 1.</li>
+              <li>Review your estimated total and submit the order.</li>
+            </ol>
+            <p className="text-xs text-gray-400 mt-3">
+              Orders execute at live market price when the market is open.
+            </p>
+          </div>
+
           <TradePanel
             symbol={sym}
             currentPrice={quote?.price || 0}
